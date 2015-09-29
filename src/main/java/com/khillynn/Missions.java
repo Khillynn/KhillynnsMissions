@@ -68,7 +68,6 @@ public class Missions extends JavaPlugin implements Listener {
 
             scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
 
-                int position = 0;
                 Sign sign = (Sign) e.getClickedBlock().getState();
 
                 public void run() {
@@ -88,16 +87,14 @@ public class Missions extends JavaPlugin implements Listener {
                             message = sb.toString();
                         }
 
+                        String movingMessage = message.substring(1, message.length() - 1);
+                        movingMessage = movingMessage + message.charAt(0);
 
-                        String origMess = message.substring(1, message.length() - 1);
-                        origMess = origMess + message.charAt(0);
-
-                        sign.setLine(lineNumber, origMess);
+                        sign.setLine(lineNumber, movingMessage);
                         sign.update();
                     }
                 }
             }, 0L, 3L);
         }
-
     }
 }
