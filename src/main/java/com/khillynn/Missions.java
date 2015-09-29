@@ -11,8 +11,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.util.Objects;
+import org.bukkit.scheduler.BukkitScheduler;
 
 public class Missions extends JavaPlugin implements Listener {
     int maxSignLines = 4;
@@ -32,13 +31,13 @@ public class Missions extends JavaPlugin implements Listener {
         player.sendMessage(this.getConfig().getString("motd"));
     }
 
-    //Mission Two - make numbers on sign increase by 1 every time a player right clicks it
+    //Mission Two - make numbers on sign increase by 1 every time a player clicks it
     @EventHandler
-    public void onPlayerClickSign(PlayerInteractEvent e) {
+    public void onPlayerClickSign(final PlayerInteractEvent e) {
         Player player = e.getPlayer();
 
         //below checks if the clicked block is a sign
-        if ((e.getAction().equals(Action.RIGHT_CLICK_BLOCK))
+        if ((e.getAction().equals(Action.LEFT_CLICK_BLOCK))
                 && (e.getClickedBlock().getType() == Material.SIGN
                 || e.getClickedBlock().getType() == Material.SIGN_POST
                 || e.getClickedBlock().getType() == Material.WALL_SIGN)) {
@@ -49,37 +48,37 @@ public class Missions extends JavaPlugin implements Listener {
             for (int lineNum = 0; lineNum < maxSignLines; lineNum++) {
                 String signText = sign.getLine(lineNum);
 
-                if (signText != null && !Objects.equals(signText, "")) {
-                    int num = Integer.parseInt(signText);
-                    int newNum = num + 1;
+                if (!signText.matches("^\\-?[0-9]+$"))
+                    continue;
 
-                    sign.setLine(lineNum, String.valueOf(newNum));
-                    sign.update();
-                }
+                int num = Integer.parseInt(signText);
+                int newNum = num + 1;
+
+                sign.setLine(lineNum, String.valueOf(newNum));
+                sign.update();
             }
         }
-    }
 
-    /*
-    //Mission Three - make signs scroll text horizontally
-    @EventHandler
-    public void signChanged(final SignChangeEvent e) {
+        //Mission Three - make signs scroll text horizontally
+        if((e.getAction().equals(Action.RIGHT_CLICK_BLOCK))
+                && (e.getClickedBlock().getType() == Material.SIGN
+                || e.getClickedBlock().getType() == Material.SIGN_POST
+                || e.getClickedBlock().getType() == Material.WALL_SIGN)){
+            BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
 
-        BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
+            scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
 
-        scheduler.scheduleSyncRepeatingTask(this, new Runnable() {
+                int position = 0;
+                Sign sign = (Sign) e.getClickedBlock().getState();
 
-            int position = 0;
-            Sign sign = (Sign) e.getBlock().getState();
+                public void run() {
+                    for (int lineNumber = 0; lineNumber < maxSignLines; lineNumber++) {
+                        String message = sign.getLine(lineNumber);
 
-            public void run() {
-                for (int lineNumber = 0; lineNumber < maxSignLines; lineNumber++) {
-                    String message = sign.getLine(lineNumber);
+                        if(sign.getLine(lineNumber).isEmpty())
+                            continue;
 
-                    if (!message.isEmpty()) {
-                        List<Character> list = new ArrayList<>();
                         int lengthOfSign = 16;
-                        char currFirstChar = 0;
 
                         //below adds spaces to lines that are smaller than the width of the sign
                         if (message.length() < lengthOfSign) {
@@ -89,30 +88,16 @@ public class Missions extends JavaPlugin implements Listener {
                             message = sb.toString();
                         }
 
-                        for (int loopNum = 0; loopNum < message.length(); loopNum++) {
-                            if (loopNum == 0) {
-                                currFirstChar = message.charAt(loopNum);
-                                continue;
-                            }
 
-                            if (position < lengthOfSign - 1) {
-                                list.add(message.charAt(loopNum));
-                                position++;
-                            }
-                            else {
-                                list.add(currFirstChar);
-                                position = 0;
-                            }
-                        }
+                        String origMess = message.substring(1, message.length() - 1);
+                        origMess = origMess + message.charAt(0);
 
-                        String newLine = String.valueOf(list);
-
-                        sign.setLine(lineNumber, newLine);
+                        sign.setLine(lineNumber, origMess);
                         sign.update();
                     }
                 }
-            }
-        }, 0L, 40L);
+            }, 0L, 3L);
+        }
+
     }
-    */
 }
