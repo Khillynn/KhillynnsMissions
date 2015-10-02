@@ -14,9 +14,10 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitScheduler;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,9 +45,9 @@ public class ForeverSpawn extends JavaPlugin implements Listener{
             try {
                 Location telLoc = createNewSpawn(player, world);
                 playerData.createSection("location");
-                playerData.set("location.x", telLoc.getX());
-                playerData.set("location.y", telLoc.getY());
-                playerData.set("location.z", telLoc.getZ());
+                playerData.set("location.x", telLoc.getBlockX());
+                playerData.set("location.y", telLoc.getBlockY());
+                playerData.set("location.z", telLoc.getBlockZ());
                 playerData.save(file);
             }catch (IOException exception) {
 
@@ -57,8 +58,14 @@ public class ForeverSpawn extends JavaPlugin implements Listener{
     }
 
     @EventHandler
-    public void playerDeath(PlayerDeathEvent e){
-        sendPlayerToSpawn(e.getEntity());
+    public void playerRespawn(final PlayerRespawnEvent e){
+        BukkitScheduler scheduler = Bukkit.getScheduler();
+                scheduler.scheduleSyncDelayedTask(this, new Runnable() {
+                    @Override
+                    public void run() {
+                        sendPlayerToSpawn(e.getPlayer());
+                    }
+                }, 5L);
     }
 
     private void sendPlayerToSpawn(Player p){
@@ -68,16 +75,16 @@ public class ForeverSpawn extends JavaPlugin implements Listener{
         FileConfiguration playerData = YamlConfiguration.loadConfiguration(file);
 
         World world = p.getWorld();
-        double x = (double) playerData.get("location.x");
-        double y = (double) playerData.get("location.y");
-        double z = (double) playerData.get("location.z");
+        int x = (int) playerData.get("location.x");
+        int y = (int) playerData.get("location.y");
+        int z = (int) playerData.get("location.z");
 
         Location telLoc = new Location(world, x, y, z);
 
         //if the chunk isn't loaded then load it
-        if(!world.getChunkAt((int) telLoc.getX(),(int) telLoc.getZ()).isLoaded())
-            world.loadChunk((int) telLoc.getX(),(int) telLoc.getZ());
-        
+        if(!world.getChunkAt(telLoc.getBlockX(),telLoc.getBlockZ()).isLoaded())
+            world.loadChunk(telLoc.getBlockX(),telLoc.getBlockZ());
+
         p.teleport(telLoc);
     }
 
@@ -94,7 +101,6 @@ public class ForeverSpawn extends JavaPlugin implements Listener{
         */
         while(!safePlace) {
             telLoc = createLocation(p, world);
-            spawnBlock = new Location(world, telLoc.getX(), telLoc.getY() - 1, telLoc.getZ());
             safePlace = isSafe(spawnBlock);
         }
 
@@ -102,6 +108,7 @@ public class ForeverSpawn extends JavaPlugin implements Listener{
         if(!world.getChunkAt((int) telLoc.getX(),(int) telLoc.getZ()).isLoaded())
             world.loadChunk((int) telLoc.getX(),(int) telLoc.getZ());
         //below teleports the player to the new location and makes the block they teleport to made of wool
+        spawnBlock = new Location(world, telLoc.getX(), telLoc.getY() - 1, telLoc.getZ());
         spawnBlock.getBlock().setType(Material.WOOL);
 
         return telLoc;
@@ -114,9 +121,9 @@ public class ForeverSpawn extends JavaPlugin implements Listener{
         int RADIUS = Integer.parseInt(this.getConfig().getString("radius"));
 
         int x = random.nextInt(RADIUS * 2);
-        x -= (RADIUS + (int) worldSpawn.getX());
+        x -= (RADIUS + worldSpawn.getBlockX());
         int z = random.nextInt(RADIUS * 2);
-        z -= (RADIUS + (int) worldSpawn.getZ());
+        z -= (RADIUS + worldSpawn.getBlockZ());
         int y = p.getWorld().getHighestBlockYAt(x,z);
 
         return new Location(world, x, y, z);
@@ -129,6 +136,7 @@ public class ForeverSpawn extends JavaPlugin implements Listener{
         return !(block == Material.LAVA
                 || block == Material.WATER
                 || block == Material.STATIONARY_WATER
+                || block == Material.WATER_LILY
                 || block == Material.FIRE
                 || block == Material.WEB
                 || block == Material.CACTUS);
