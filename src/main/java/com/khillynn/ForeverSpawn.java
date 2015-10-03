@@ -139,6 +139,8 @@ public class ForeverSpawn extends JavaPlugin implements Listener{
                 || block == Material.WATER_LILY
                 || block == Material.FIRE
                 || block == Material.WEB
-                || block == Material.CACTUS);
+                || block == Material.CACTUS
+                || block.isTransparent()
+        );
     }
 }
